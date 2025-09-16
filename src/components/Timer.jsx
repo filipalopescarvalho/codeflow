@@ -3,9 +3,10 @@ import { formatTime, saveTimer, loadTimer, resetTimer } from '../utils/timerUtil
 
 const Timer = ({ taskId, onSessionEnd }) => {
   const presets = [
+    { label: 'Short', seconds: 15 * 60 },
     { label: 'Pomodoro', seconds: 25 * 60 },
-    { label: 'Long', seconds: 50 * 60 },
-    { label: 'Short', seconds: 15 * 60 }
+    { label: 'Long', seconds: 50 * 60 }
+    
   ];
 
   const [seconds, setSeconds] = useState(() => loadTimer(taskId));
@@ -33,7 +34,10 @@ const Timer = ({ taskId, onSessionEnd }) => {
     }
   }, [seconds, duration, onSessionEnd, taskId]);
 
-  const handleReset = () => {
+  const handleStop = () => {
+    if (seconds > 0) {
+      onSessionEnd(taskId, seconds); 
+    }
     setSeconds(0);
     setIsRunning(false);
     resetTimer(taskId);
@@ -55,23 +59,18 @@ const Timer = ({ taskId, onSessionEnd }) => {
         <button onClick={() => setIsRunning(!isRunning)}>
           {isRunning ? 'Pause' : 'Start'}
         </button>
-        <button onClick={handleReset}>Reset</button>
+        <button onClick={handleStop}>Stop</button>
       </div>
 
       <div className="progress-bar-container" style={{ marginTop: '5px', height: '8px', background: '#eee', borderRadius: '4px', overflow: 'hidden' }}>
-        <div className="progress-bar" style={{
-          width: `${progressPercent}%`,
-          height: '100%',
-          background: '#2196f3',
-          transition: 'width 0.2s'
-        }}></div>
+        <div style={{ width: `${progressPercent}%`, height: '100%', background: '#2196f3', borderRadius: '3px', transition: 'width 0.2s' }} />
       </div>
 
       <div className="duration-select" style={{ marginTop: '5px' }}>
         <label>Select duration: </label>
         <select value={duration} onChange={handleDurationChange}>
           {presets.map(p => (
-            <option key={p.label} value={p.seconds}>{p.label} ({p.seconds/60} min)</option>
+            <option key={p.label} value={p.seconds}>{p.label} ({p.seconds / 60} min)</option>
           ))}
         </select>
       </div>
