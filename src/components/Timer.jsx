@@ -3,19 +3,17 @@ import { formatTime, saveTimer, loadTimer, resetTimer } from '../utils/timerUtil
 
 const Timer = ({ taskId, onSessionEnd }) => {
   const presets = [
-    { label: 'Short', seconds: 15 * 60 },
     { label: 'Pomodoro', seconds: 25 * 60 },
-    { label: 'Long', seconds: 50 * 60 }
-    
+    { label: 'Short Break', seconds: 15 * 60 },
+    { label: 'Long Break', seconds: 50 * 60 },
   ];
 
-  const [seconds, setSeconds] = useState(() => loadTimer(taskId));
+  const [currentPreset, setCurrentPreset] = useState(presets[0]);
+  const [seconds, setSeconds] = useState(() => loadTimer(taskId) || presets[0].seconds);
   const [isRunning, setIsRunning] = useState(false);
-  const [duration, setDuration] = useState(presets[0].seconds);
+  const [sessionsCompleted, setSessionsCompleted] = useState(0);
 
-  useEffect(() => {
-    saveTimer(taskId, seconds);
-  }, [seconds, taskId]);
+  useEffect(() => { saveTimer(taskId, seconds); }, [seconds, taskId]);
 
   useEffect(() => {
     let interval = null;
@@ -26,53 +24,71 @@ const Timer = ({ taskId, onSessionEnd }) => {
   }, [isRunning]);
 
   useEffect(() => {
-    if (seconds >= duration) {
+    if (seconds >= currentPreset.seconds) {
       onSessionEnd(taskId, seconds);
+      setSessionsCompleted(sessionsCompleted + 1);
       setSeconds(0);
       setIsRunning(false);
       resetTimer(taskId);
     }
-  }, [seconds, duration, onSessionEnd, taskId]);
+  }, [seconds, currentPreset, onSessionEnd, taskId, sessionsCompleted]);
 
   const handleStop = () => {
-    if (seconds > 0) {
-      onSessionEnd(taskId, seconds); 
-    }
     setSeconds(0);
     setIsRunning(false);
     resetTimer(taskId);
   };
 
-  const handleDurationChange = (e) => {
-    const newDuration = Number(e.target.value);
-    setDuration(newDuration);
-    setSeconds(0);
-    setIsRunning(false);
-  };
-
-  const progressPercent = Math.min((seconds / duration) * 100, 100);
+  const progressPercent = Math.min((seconds / currentPreset.seconds) * 100, 100);
+  const progressColor = progressPercent > 80 ? '#ef4444' : '#3b82f6';
 
   return (
     <div className="timer">
-      <div className="timer-controls">
+      {/* Timer Display */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+        <strong>{currentPreset.label}</strong>
         <span>{formatTime(seconds)}</span>
-        <button onClick={() => setIsRunning(!isRunning)}>
+      </div>
+
+      {/* Progress Bar */}
+      <div style={{ height: '10px', width: '100%', background: '#e5e7eb', borderRadius: '5px', overflow: 'hidden', marginBottom: '12px' }}>
+        <div style={{
+          width: `${progressPercent}%`,
+          height: '100%',
+          background: progressColor,
+          transition: 'width 0.3s, background 0.3s'
+        }} />
+      </div>
+
+      {/* Timer Buttons */}
+      <div className="timer-buttons" style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+        <button onClick={() => setIsRunning(!isRunning)} className="start">
           {isRunning ? 'Pause' : 'Start'}
         </button>
-        <button onClick={handleStop}>Stop</button>
+        <button onClick={handleStop} className="stop">Stop</button>
       </div>
 
-      <div className="progress-bar-container" style={{ marginTop: '5px', height: '8px', background: '#eee', borderRadius: '4px', overflow: 'hidden' }}>
-        <div style={{ width: `${progressPercent}%`, height: '100%', background: '#2196f3', borderRadius: '3px', transition: 'width 0.2s' }} />
-      </div>
-
-      <div className="duration-select" style={{ marginTop: '5px' }}>
-        <label>Select duration: </label>
-        <select value={duration} onChange={handleDurationChange}>
+      {/* Dropdown for selecting preset */}
+      <div style={{ marginBottom: '8px' }}>
+        <label style={{ marginRight: '8px' }}>Select Timer:</label>
+        <select
+          value={currentPreset.label}
+          onChange={(e) => {
+            const selected = presets.find(p => p.label === e.target.value);
+            setCurrentPreset(selected);
+            setSeconds(0);
+            setIsRunning(false);
+          }}
+        >
           {presets.map(p => (
-            <option key={p.label} value={p.seconds}>{p.label} ({p.seconds / 60} min)</option>
+            <option key={p.label} value={p.label}>{p.label} ({p.seconds / 60} min)</option>
           ))}
         </select>
+      </div>
+
+      {/* Completed Sessions */}
+      <div style={{ marginTop: '8px', fontSize: '0.85rem', color: '#6b7280' }}>
+        Completed sessions: {sessionsCompleted}
       </div>
     </div>
   );
